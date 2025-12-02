@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Param, Query, HttpException, HttpStatus } from '@nestjs/common';
 import { CreateDonationDto } from './dto/create-donation.dto';
 import { DonationsService } from './donation.service';
 import { Donation } from './entities/donation.entity';
@@ -10,7 +10,15 @@ export class DonationsController {
 
   @Post()
   async create(@Body() dto: CreateDonationDto): Promise<Donation> {
-    return this.svc.create(dto);
+    console.log('POST /donations payload:', JSON.stringify(dto));
+    try {
+      const result = await this.svc.create(dto);
+      console.log('Donation created, id=', result?.id);
+      return result;
+    } catch (err) {
+      console.error('Error in DonationsController.create:', err?.message || err);
+      throw new HttpException(err?.message || 'Internal Server Error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   @Get()
