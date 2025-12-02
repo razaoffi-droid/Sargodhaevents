@@ -97,4 +97,50 @@ export class DonationsService {
     };
   }
 
+
+  //total donations summary
+
+
+  async getMachinesSummary() {
+  const requiredAmounts = {
+    ecg: 100000,
+    echo: 200000,
+    mri: 500000,
+  };
+
+  // get total collected for each machine
+  const donations = await this.donationRepo
+    .createQueryBuilder('donation')
+    .select('donation.donationFor', 'machine')
+    .addSelect('SUM(donation.amount)', 'totalCollected')
+    .groupBy('donation.donationFor')
+    .getRawMany();
+
+  let totalCollectedAll = 0;
+  let totalRequiredAll = 0;
+
+  const machines = donations.map((item) => {
+    const machineName = item.machine?.toLowerCase();
+    const collected = Number(item.totalCollected) || 0;
+    const required = requiredAmounts[machineName] || 0;
+
+    totalCollectedAll += collected;
+    totalRequiredAll += required;
+
+    return {
+      machine: machineName,
+      collectedAmount: collected,
+      requiredAmount: required,
+      remainingAmount: required - collected,
+    };
+  });
+
+  return {
+    machines,
+    totalCollectedAll,
+    totalRequiredAll,
+    totalRemainingAll: totalRequiredAll - totalCollectedAll,
+  };
+}
+
 }
