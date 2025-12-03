@@ -101,40 +101,91 @@ export class DonationsService {
   //total donations summary
 
 
-  async getMachinesSummary() {
-  const requiredAmounts = {
-    ecg: 100000,
-    echo: 200000,
-    mri: 500000,
+//   async getMachinesSummary() {
+//   const requiredAmounts = {
+//     "USG Machine Aplio-400 Platinum (Refurb)": 2000000,
+//     "X-Ray Machine KXO-50R(Toshiba(Japan) 630MA)": 3500000,
+//     "ECG 3 channel": 100000,
+//     "OPG Verbview(Japan)": 2000000,
+//     "CT Scan 64 slices Toshiba(Japan) with Accessores": 30000000,
+//     "0.4 Tesla Hitachi MRI (Refurb)": 57500000,
+//     "ECHO Machine-Paolus Plus(Japan)": 900000,
+  
+//   };
+
+//   // get total collected for each machine
+//   const donations = await this.donationRepo
+//     .createQueryBuilder('donation')
+//     .select('donation.donationFor', 'machine')
+//     .addSelect('SUM(donation.amount)', 'totalCollected')
+//     .groupBy('donation.donationFor')
+//     .getRawMany();
+
+//   let totalCollectedAll = 0;
+//   let totalRequiredAll = 96000000; // sum of all required amounts
+
+//   const machines = donations.map((item) => {
+//     const machineName = item.machine?.toLowerCase();
+//     const collected = Number(item.totalCollected) || 0;
+//     const required = requiredAmounts[machineName] || 0;
+
+//     totalCollectedAll += collected;
+//     totalRequiredAll += required;
+
+//     return {
+//       machine: machineName,
+//       collectedAmount: collected,
+//       requiredAmount: required,
+//       remainingAmount: required - collected,
+//     };
+//   });
+
+//   return {
+//     machines,
+//     totalCollectedAll,
+//     totalRequiredAll,
+//     totalRemainingAll: totalRequiredAll - totalCollectedAll,
+//   };
+// }
+
+
+async getMachinesSummary() {
+  const requiredAmounts: Record<string, number> = {
+    "usg machine aplio-400 platinum (refurb)": 2000000,
+    "x-ray machine kxo-50r(toshiba(japan) 630ma": 3500000,
+    "ecg 3 channel": 100000,
+    "opg verbview(japan)": 2000000,
+    "ct scan 64 slices toshiba(japan) with accessores": 30000000,
+    "0.4 tesla hitachi mri (refurb)": 57500000,
+    "echo machine-paolus plus(japan)": 900000,
   };
-
-  // get total collected for each machine
   const donations = await this.donationRepo
-    .createQueryBuilder('donation')
-    .select('donation.donationFor', 'machine')
-    .addSelect('SUM(donation.amount)', 'totalCollected')
-    .groupBy('donation.donationFor')
+    .createQueryBuilder("donation")
+    .select("donation.donationFor", "machine")
+    .addSelect("SUM(donation.amount)", "totalCollected")
+    .groupBy("donation.donationFor")
     .getRawMany();
-
-  let totalCollectedAll = 0;
-  let totalRequiredAll = 0;
-
-  const machines = donations.map((item) => {
-    const machineName = item.machine?.toLowerCase();
-    const collected = Number(item.totalCollected) || 0;
-    const required = requiredAmounts[machineName] || 0;
-
-    totalCollectedAll += collected;
-    totalRequiredAll += required;
-
-    return {
-      machine: machineName,
-      collectedAmount: collected,
-      requiredAmount: required,
-      remainingAmount: required - collected,
-    };
+  // :white_check_mark: Build lookup from donations
+  const donationMap = new Map<string, number>();
+  donations.forEach((item) => {
+    const key = (item.machine || "").toLowerCase().trim();
+    donationMap.set(key, Number(item.totalCollected) || 0);
   });
-
+  let totalCollectedAll = 0;
+  const totalRequiredAll = 96000000; // as per your logic
+  // :white_check_mark: Iterate over ALL machines
+  const machines = Object.entries(requiredAmounts).map(
+    ([machineKey, required]) => {
+      const collected = donationMap.get(machineKey) || 0;
+      totalCollectedAll += collected;
+      return {
+        machine: machineKey, // same structure
+        collectedAmount: collected,
+        requiredAmount: required,
+        remainingAmount: Math.max(required - collected, 0),
+      };
+    }
+  );
   return {
     machines,
     totalCollectedAll,
